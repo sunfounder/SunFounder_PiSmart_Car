@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="save" content="history">
+    <link rel = "Shortcut Icon" href="{% static 'favicon.ico' %} ">
+    <!-- load MUI -->
+    <link href="//cdn.muicss.com/mui-0.6.9/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <script src="//cdn.muicss.com/mui-0.6.9/js/mui.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript">
+      function action(value){
+        var xmlHttp  = new XMLHttpRequest();
+        var protocol  = window.location.protocol;
+        var host      = window.location.host;
+        var pathname  = window.location.pathname;
+        url = protocol + "//" + host + pathname + "?action" + "=" + value;
+        //document.getElementById("debug").innerHTML=url;
+        xmlHttp.open( "GET", url, false );
+        xmlHttp.send( null );
+        return xmlHttp.responseText;
+      }
+    </script>
+  </head>
+
+{% block whole_body %}
+<body  class="mui--no-user-select">
+  <div class="mui--z2">
+    <div class="mui-appbar mui-container-fluid mui--bg-primary-dark">
+      <table width="100%">
+        <td class="mui--appbar-height">
+          <div class="mui-row">
+            <div class="mui-col-xs-1 mui-col-md-1", align="right">
+              {% block left_button %}{% endblock %}
+            </div>
+            <div class="mui-col-xs-6 mui-col-md-6 mui-col-xs-offset-2 mui-col-md-offset-2 mui--text-headline mui--no-user-select", align="center">
+                {% block page_title %}
+                  Orion Car
+                {% endblock %}
+            </div>
+            <div class="mui-col-xs-1 mui-col-md-1", align="left">
+              {% block right_button %}{% endblock %}
+            </div>
+          </div>
+        </td>
+      </table>
+    </div>
+  </div>
+  {% block content %}
+  <br>
+  <div class="mui-panel", align="center">
+    <img src="{% static 'sunfounder_logo_rgb_300.png' %}"/>
+  </div>
+  <div align="center">
+    <form action="/run/" method="get">
+      <button class="mui-btn mui-btn--danger">Get Start!</button>
+    </form>
+  </div>
+  {% endblock %}
+</body>
+{% endblock %}
+</html>
