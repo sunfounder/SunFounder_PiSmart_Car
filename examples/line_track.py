@@ -11,41 +11,38 @@
 * Detail		 : New file
 **********************************************************************
 '''
-from orion import Orion, Motor, TTS, Speech_Recognition, LED
+from pirobot import PiRobot, Motor, TTS, Speech_Recognition, LED
 import numpy
 import time
 import line_follower_module
 
-o = Orion()
+REFERENCES = [359, 352, 342, 316, 356]
+
+forward_speed = 70
+turning_speed = 60
+
+max_off_track_count = 1
+max_trick_count = 1
+
+p = PiRobot()
 tts = TTS()
 sr = Speech_Recognition('command', dictionary_update=False)
 led = LED(LED.BLUE)
-lf = line_follower_module.Line_Follower()
+lf = line_follower_module.Line_Follower(references=REFERENCES)
 
-o.motor_switch(1)
-o.servo_switch(1)
-o.speaker_switch(1)
+p.motor_switch(1)
+p.servo_switch(1)
+p.speaker_switch(1)
 
 left_motor = Motor('Motor B', forward=0)
 right_motor = Motor('Motor A', forward=1)
 left_motor.stop()
 right_motor.stop()
 
-o.power_type = '2S'
-o.volume = 95
+p.power_type = '2S'
+p.volume = 95
+p.capture_volume = 100
 tts.engine = 'pico'
-
-lt_tolerate = 100
-
-forward_speed = 70
-turning_speed = 60
-
-max_off_track_count = 1
-
-WHITE_REFERENCES = [594, 573, 556, 530, 581]
-BLACK_REFERENCES = [930, 906, 911, 884, 838]
-
-MIDDLE_REFERENCES = [359, 352, 342, 316, 356]
 
 def setup():
 	tts.say("Hello, I can track black lines now, Do I need a calibration for the black and white colors?")
@@ -88,7 +85,6 @@ def main():
 	tts.say('Take me to the start point.')
 	time.sleep(2)
 	tts.say("Let's roll!")
-	print 'begin'
 	left_speed = forward_speed
 	right_speed = forward_speed
 	a_step = 0.1
@@ -96,7 +92,7 @@ def main():
 	c_step = 0.7
 	d_step = 1
 	while True:
-		lt_status = read_status()
+		lt_status = lf.read_digital()
 		print lt_status
 		# Speed calculate
 		if	lt_status == [0,0,1,0,0]:
@@ -143,22 +139,22 @@ def main():
 							direction = 2
 							break
 					led.off()
-					tts.say('Thank you.')
+					tts.say('Ok, let me see.')
 					if   direction == 1:
 						left_motor.backward(turning_speed)
 						right_motor.forward(turning_speed)
 					elif direction == 2:
 						left_motor.forward(turning_speed)
 						right_motor.backward(turning_speed)
-					if found_line(0.5):
+					if lf.found_line_in(0.5):
 						left_motor.stop()
 						right_motor.stop()
-						tts.say('Here it is! Thanks again!')
+						tts.say('Here it is! Thank you!')
 						break
 					else:
 						left_motor.stop()
 						right_motor.stop()
-						if trick_count < 3:
+						if trick_count < max_trick_count:
 							tts.say('Are you kidding me?')
 							trick_count += 1
 							time.sleep(0.3)
@@ -182,108 +178,43 @@ def main():
 		left_motor.forward(left_speed)
 		right_motor.forward(right_speed)
 
-def found_line(timeout):
-	time_start = time.time()
-	time_during = 0
-	while time_during < timeout:
-		lt_status = read_status()
-		result = 0
-		for lt in lt_status:
-			result = result or lt
-		if result == 1:
-			return True
-		time_now = time.time()
-		time_during = time_now - time_start
-	return False
-
-def read_status():
-	lt = lf.read()
-	status_list = []
-	for i in range(0, 5):
-		if lt[i] > MIDDLE_REFERENCES[i]:
-			status_list.append(0)
-		elif lt[i] < MIDDLE_REFERENCES[i]:
-			status_list.append(1)
-		else:
-			status_list.append(-1)
-	return status_list
 
 def cali():
 	mount = 100
-	global WHITE_REFERENCES, BLACK_REFERENCES, MIDDLE_REFERENCES
 	tts.say('Take me to the white.')
 	time.sleep(2)
 	led.brightness = 60
 	tts.say('Measuring')
-	lt0_list = []
-	lt1_list = []
-	lt2_list = []
-	lt3_list = []
-	lt4_list = []
-	for i in range(0, mount):
-		lt0, lt1, lt2, lt3, lt4 = lf.read()
-		lt0_list.append(lt0)
-		lt1_list.append(lt1)
-		lt2_list.append(lt2)
-		lt3_list.append(lt3)
-		lt4_list.append(lt4)
-	lt0 = int(numpy.mean(lt0_list))
-	lt1 = int(numpy.mean(lt1_list))
-	lt2 = int(numpy.mean(lt2_list))
-	lt3 = int(numpy.mean(lt3_list))
-	lt4 = int(numpy.mean(lt4_list))
-	WHITE_REFERENCES = [lt0, lt1, lt2, lt3, lt4]
+	white_references = lf.get_average(mount)
 	tts.say('Done')
 	led.off()
-	print 'White references =', WHITE_REFERENCES
-	time.sleep(1)
 
 	tts.say('Now, take me to the black.')
 	time.sleep(2)
 	led.brightness = 60
 	tts.say('Measuring')
-	lt0_list = []
-	lt1_list = []
-	lt2_list = []
-	lt3_list = []
-	lt4_list = []
-	for i in range(0, mount):
-		lt0, lt1, lt2, lt3, lt4 = lf.read()
-		lt0_list.append(lt0)
-		lt1_list.append(lt1)
-		lt2_list.append(lt2)
-		lt3_list.append(lt3)
-		lt4_list.append(lt4)
-	lt0 = int(numpy.mean(lt0_list))
-	lt1 = int(numpy.mean(lt1_list))
-	lt2 = int(numpy.mean(lt2_list))
-	lt3 = int(numpy.mean(lt3_list))
-	lt4 = int(numpy.mean(lt4_list))
-	BLACK_REFERENCES = [lt0, lt1, lt2, lt3, lt4]
-
+	black_references = lf.get_average(mount)
 	tts.say("Done.")
 	led.off()
-	print "Black references =", BLACK_REFERENCES
-	time.sleep(1)
 	for i in range(0, 5):
-		MIDDLE_REFERENCES[i] = (WHITE_REFERENCES[i] + BLACK_REFERENCES[i]) / 2
-	print "Middle references =", MIDDLE_REFERENCES
+		references[i] = (white_references[i] + black_references[i]) / 2
+	lf.references = references
+	print "Middle references =", references
 	time.sleep(1)
-
 
 def test():
 	cali()
 	while True:
-		print lf.read()
-		print read_status()
+		print lf.read_analog()
+		print lf.read_digital()
 		time.sleep(0.5)
 
 def destroy():
 	left_motor.stop()
 	right_motor.stop()
-	o.motor_switch(0)
-	o.servo_switch(0)
-	o.speaker_switch(0)
+	p.motor_switch(0)
+	p.servo_switch(0)
+	p.speaker_switch(0)
 	tts.say("Bye-bye.")
 	led.off()
 	quit()
