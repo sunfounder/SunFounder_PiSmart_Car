@@ -12,14 +12,22 @@
 **********************************************************************
 '''
 from pirobot import PiRobot, Motor, TTS, Speech_Recognition, LED
-import numpy
 import time
 import line_follower_module
 
-REFERENCES = [359, 352, 342, 316, 356]
+REFERENCES = [300, 300, 300, 300, 300]
 
-forward_speed = 40
-turning_speed = 40
+FORWARD_SPEED = 40
+TURNING_SPEED = 40
+
+TURNING_DELAY = 0.68
+REFLASH_DELAY = 0.01
+CHECK_TURNING_TIMES = 20
+CHECK_FORWARD_TIMES = 20
+
+A_STEP = 0.1
+B_STEP = 0.3
+C_STEP = 0.5
 
 p = PiRobot()
 tts = TTS()
@@ -41,9 +49,37 @@ p.volume = 100
 p.capture_volume = 100
 tts.engine = 'pico'
 
+LEFT_STATUS = (
+	#[1,1,0,0,0],
+	[1,1,1,0,0],
+	[1,1,1,1,0],
+	)
+RIGHT_STATUS = (
+	#[0,0,0,1,1],
+	[0,0,1,1,1],
+	[0,1,1,1,1],
+	)
+FORWARD_STATUS = (
+	[1,1,0,0,0],
+	[0,1,0,0,0],
+	[0,1,1,0,0],
+	[0,0,1,0,0],
+	[0,0,1,1,0],
+	[0,0,0,1,0],
+	[0,0,0,1,1],
+	)
+FOLLOW_STATUS = (
+	[1,1,0,0,0],
+	[0,1,0,0,0],
+	[0,1,1,0,0],
+	[0,0,1,0,0],
+	[0,0,1,1,0],
+	[0,0,0,1,0],
+	[0,0,0,1,1],
+	)
 
-def debug(info):
-	print info
+
+STATUS = ['Finish', 'Line Follow', 'Turning Check', 'Wait Command', 'Turn']
 
 def setup():
 	tts.say("Hello, I can do walk through a maze with your help.")
@@ -80,148 +116,185 @@ def setup():
 		destroy()
 
 def main():
-	check_turning_time = 0.5
-
-	turning_point = [0,0,0]     # Possible Turning way
+	global lf_status
+	turning_point = [0,0,0]     # Possible Turning way: [left,forward,right]
+	status = 1
 
 	tts.say('Now, Take me to the start point.')
 	time.sleep(3)
 	tts.say("Let's roll!")
-	left_speed = forward_speed
-	right_speed = forward_speed
-	a_step = 0.1
-	b_step = 0.3
-	c_step = 0.7
-	d_step = 1
+	left_speed = FORWARD_SPEED
+	right_speed = FORWARD_SPEED
+	lf_status = [0,0,0,0,0]
+	turning_direction = 0
 
-	Finished = False
+	while STATUS[status] != 'Finish':
+		while STATUS[status] == 'Line Follow':
+			print '\n---------------------------------'
+			print 'Line Following'
+			while True:
+				reflash_lf_status()
+				if  lf_status in FOLLOW_STATUS:
+					if	lf_status == [0,0,1,0,0]:
+						step = 0
+					elif lf_status in ([0,1,1,0,0], [0,0,1,1,0]):
+						step = A_STEP
+					elif lf_status in ([0,1,0,0,0], [0,0,0,1,0]):
+						step = B_STEP
+					elif lf_status in ([1,1,0,0,0], [0,0,0,1,1]):
+						step = C_STEP
+	
+					# Direction calculate
+					if	lf_status == [0,0,1,0,0]:
+						right_speed = FORWARD_SPEED
+						left_speed = FORWARD_SPEED
+					elif lf_status in ([0,1,1,0,0],[0,1,0,0,0],[1,1,0,0,0],[1,0,0,0,0]):
+						right_speed = int(TURNING_SPEED * (1+step))
+						left_speed = int(TURNING_SPEED * (1-step))
+					elif lf_status in ([0,0,1,1,0],[0,0,0,1,0],[0,0,0,1,1],[0,0,0,0,1]):
+						left_speed = int(TURNING_SPEED * (1+step))
+						right_speed = int(TURNING_SPEED * (1-step))
+	
+					left_speed = speed_limit(left_speed)
+					right_speed = speed_limit(right_speed)
+					left_motor.forward(left_speed)
+					right_motor.forward(right_speed)
+				else:
+					break
+			if lf_status == [0, 0, 0, 0, 0]:
+				turning_direction = 'back'
+				status = 4
+			if lf_status in LEFT_STATUS or lf_status in RIGHT_STATUS or lf_status == [1,1,1,1,1]:
+				status = 2
 
-	while not Finished:
-		lt_status = lf.read_digital()
-		print lt_status
-		# Line Follow:
-		if  lt_status not in ([0,0,0,0,0], [1,1,1,0,0], [1,1,1,1,0], [1,1,1,1,1], [0,0,1,1,1], [0,1,1,1,1]):
-			#print 'Line Follow'
-			if	lt_status == [0,0,1,0,0]:
-				step = 0
-			elif lt_status in ([0,1,1,0,0], [0,0,1,1,0]):
-				step = a_step
-			elif lt_status in ([0,1,0,0,0], [0,0,0,1,0]):
-				step = b_step
-			elif lt_status in ([1,1,0,0,0], [0,0,0,1,1]):
-				step = c_step
-			elif lt_status in ([1,0,0,0,0], [0,0,0,0,1]):
-				step = d_step
-
-			# Direction calculate
-			if	lt_status == [0,0,1,0,0]:
-				right_speed = forward_speed
-				left_speed = forward_speed
-			elif lt_status in ([0,1,1,0,0],[0,1,0,0,0],[1,1,0,0,0],[1,0,0,0,0]):
-				# turn right
-				#print 'right'
-				right_speed = int(turning_speed * (1+step))
-				left_speed = int(turning_speed * (1-step))
-			elif lt_status in ([0,0,1,1,0],[0,0,0,1,0],[0,0,0,1,1],[0,0,0,0,1]):
-				#print 'left'
-				left_speed = int(turning_speed * (1+step))
-				right_speed = int(turning_speed * (1-step))
-
-			left_speed = speed_limit(left_speed)
-			right_speed = speed_limit(right_speed)
-			left_motor.forward(left_speed)
-			right_motor.forward(right_speed)
-		# Dead End
-		elif lt_status == [0,0,0,0,0]:
-			left_motor.forward(forward_speed)
-			right_motor.forward(forward_speed)
-			time.sleep(check_turning_time)
-			lt_status = lf.read_digital()
-			if lt_status == [0,0,0,0,0]:
-				print 'dead end'
-				left_motor.forward(turning_speed)
-				right_motor.backward(turning_speed)
-				tts.say('Dead end')
-				if not found_line(3):
-					Finished = True
-		# Turning 
-		else:
-			print ' Turning Point!'
-			left_speed = forward_speed
-			right_speed = forward_speed
-			if lt_status[0:3] == [1,1,1]:
-				debug('Found left')
-				turning_point[0] = 1
-			if lt_status[2:] == [1,1,1]:
-				debug('Found right')
-				turning_point[2] = 1
-			time.sleep(check_turning_time)
-			lt_status = lf.read_digital()
-			debug('lt status: %s' % lt_status)
-			if lt_status == [1,1,1,1,1]:
+		while STATUS[status] == 'Turning Check':
+			print '\n------------------------------'
+			print 'Turning Checking'
+			left_speed = FORWARD_SPEED
+			right_speed = FORWARD_SPEED
+			turning_point = [0,0,0]     # Possible Turning way
+			for i in range(CHECK_TURNING_TIMES):
+				lf_status = lf.read_digital()
+				print ' Check turning:', lf_status
+				if lf_status in LEFT_STATUS:
+					print '  Found left'
+					turning_point[0] = 1
+				elif lf_status in RIGHT_STATUS:
+					print '  Found right'
+					turning_point[2] = 1
+				elif lf_status == [1,1,1,1,1]:
+					print '  Found left and right'
+					turning_point[0] = 1
+					turning_point[2] = 1
+			time.sleep(TURNING_DELAY/2)
+			finished = False
+			for i in range(CHECK_FORWARD_TIMES):
+				lf_status = lf.read_digital()
+				print ' Check forward', lf_status
+				if lf_status in FORWARD_STATUS:
+					print '  Found forward'
+					turning_point[1] = 1
+				elif turning_point == [1,0,1] and lf_status == [1,1,1,1,1]:
+					finished = True
+			if finished:	
+				status = 0
 				break
-			elif lt_status[2] == 1:
-				debug('Found forward')
-				turning_point[1] = 1
-
-			debug('Turning point check finished! Turning point is %s' % turning_point)
-			# Turn left:
+			time.sleep(TURNING_DELAY/2)
 			if turning_point == [1,0,0]:
-				debug('Turn left')
-				left_motor.backward(turning_speed)
-				#left_motor.stop()
-				right_motor.forward(turning_speed)
-				if not found_line(2):
-					Finished = True
-				wait_for_turning_done()
-			# Turn right:
+				turning_direction = 'left'
+				status = 4
+			elif turning_point == [0,1,0]:
+				turning_direction = 'forward'
+				status = 4
 			elif turning_point == [0,0,1]:
-				debug('Turn right')
-				left_motor.forward(turning_speed)
-				#right_motor.stop()
-				right_motor.backward(turning_speed)
-				if not found_line(2):
-					Finished = True
-				wait_for_turning_done()
+				turning_direction = 'right'
+				status = 4
 			else:
+				status = 3
+
+		while STATUS[status] == 'Wait Command':
+			print '\n-----------------------------'
+			print 'Waiting for command'
+			while True:
+				left_motor.stop()
+				right_motor.stop()
+				print '  Directions:', turning_point
+				if   turning_point == [1,1,0]:
+					tts.say('Left, and forward')
+				elif turning_point == [1,0,1]:
+					tts.say('Left, and right')
+				elif turning_point == [0,1,1]:
+					tts.say('Forward, and right')
+				elif turning_point == [1,1,1]:
+					tts.say('Left, forward, and right')
+				tts.say('Which way should I go?')
+				led.brightness=60
 				while True:
-					debug('waiting for command')
-					left_motor.stop()
-					right_motor.stop()
-					tts.say('Which way should I go?')
-					led.brightness=60
-					while True:
-						sr.recognize()
-						if sr.result == 'left':
-							direction = 1
-							break
-						if sr.result == 'right':
-							direction = 2
-							break
-						if sr.result == 'forward':
-							direction = 3
-							break
-					led.off()
-					if turning_point[direction-1] != 1:
-						tts.say('Hah! You trick me!')
-						tts.say('But, I really need your help here.')
-					else:
-						tts.say('Thank you.')
-						if   direction == 1:
-							left_motor.backward(turning_speed)
-							right_motor.forward(turning_speed)
-							lf.wait_tile_status([1,0,0,0,0])
-							wait_for_turning_done()
-						elif direction == 2:
-							left_motor.forward(turning_speed)
-							right_motor.backward(turning_speed)
-							lf.wait_tile_status([0,0,0,0,1])
-							wait_for_turning_done()
-						elif direction == 3:
-							left_motor.forward(forward_speed)
-							right_motor.forward(forward_speed)
-							break
+					sr.recognize()
+					if sr.result == 'left':
+						direction = 1
+						break
+					if sr.result == 'right':
+						direction = 3
+						break
+					if sr.result == 'forward':
+						direction = 2
+						break
+				led.off()
+				if turning_point[direction-1] != 1:
+					tts.say('Hah! You trick me!')
+					tts.say('But, I really need your help here.')
+				else:
+					tts.say('Thank you.')
+					if direction == 1:
+						turning_direction = 'left'
+					elif direction == 3:
+						turning_direction = 'right'
+					elif direction == 2:
+						turning_direction = 'forward'
+					status = 4
+					break
 			turning_point = [0,0,0]
+
+		while STATUS[status] == 'Turn':
+			print '\n-----------------------'
+			print 'Turn'
+			if turning_direction == 'left':
+				print '  Turn left'
+				left_motor.backward(TURNING_SPEED)
+				right_motor.forward(TURNING_SPEED)
+				lf.wait_tile_status([1,0,0,0,0])
+				wait_for_turning_done()
+			elif turning_direction == 'right':
+				print '  Turn right'
+				left_motor.forward(TURNING_SPEED)
+				right_motor.backward(TURNING_SPEED)
+				lf.wait_tile_status([0,0,0,0,1])
+				wait_for_turning_done()
+			elif turning_direction == 'forward':
+				print '  Forward'
+				left_motor.forward(TURNING_SPEED)
+				right_motor.forward(TURNING_SPEED)
+			elif turning_direction == 'back':
+				print '  Dead end'
+				left_motor.forward(FORWARD_SPEED)
+				right_motor.forward(FORWARD_SPEED)
+				time.sleep(TURNING_DELAY)
+				left_motor.forward(TURNING_SPEED)
+				right_motor.backward(TURNING_SPEED)
+				lf.wait_tile_status([0,0,0,0,1])
+				wait_for_turning_done()
+			turning_point = [0,0,0]
+			status =  1
+
+def reflash_lf_status():
+	global lf_status
+	last_status = lf_status
+	lf_status = lf.read_digital()
+	if lf_status != last_status:
+		time.sleep(REFLASH_DELAY)
+		lf_status = lf.read_digital()
+	#print lf_status
 
 def speed_limit(speed):
 	if speed > 100:
@@ -231,11 +304,13 @@ def speed_limit(speed):
 	return speed
 
 def wait_for_turning_done():
-	print 'Waiting for turning done...',
-	lf.wait_tile_status([0,0,1,0,0]):
+	print '    Waiting for turning done...',
+	lf.wait_tile_status([0,0,1,0,0])
+	#time.sleep(0.2)
 	print 'Done!'
 
 def cali():
+	references = [0,0,0,0,0]
 	mount = 100
 	tts.say('Take me to the white.')
 	time.sleep(2)
@@ -267,9 +342,8 @@ def destroy():
 
 if __name__ == '__main__':
 	try:
-		setup()
+		#setup()
 		main()
-	except KeyboardInterrupt:
 		destroy()
-	finally:
+	except KeyboardInterrupt:
 		destroy()

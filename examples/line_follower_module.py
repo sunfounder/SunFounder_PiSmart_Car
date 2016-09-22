@@ -20,7 +20,6 @@ class Line_Follower(object):
 		if Connection_OK:
 			return raw_result
 		else:
-			return False
 			print "Error accessing %2X" % self.address
 
 	def read_analog(self):
@@ -37,12 +36,10 @@ class Line_Follower(object):
 		lt = self.read_analog()
 		digital_list = []
 		for i in range(0, 5):
-			if lt[i] > self._references[i]:
+			if lt[i] >= self._references[i]:
 				digital_list.append(0)
 			elif lt[i] < self._references[i]:
 				digital_list.append(1)
-			else:
-				digital_list.append(-1)
 		return digital_list
 
 	def get_average(self, mount):
@@ -55,11 +52,13 @@ class Line_Follower(object):
 			for lt_id in range(0, 5):
 				lt_list[lt_id].append(lt[lt_id])
 		for lt_id in range(0, 5):
-			average[lt_id] = int(math.sum(lt_list[lt_id])/mount)
+			average[lt_id] = int(math.fsum(lt_list[lt_id])/mount)
 		return average
 
 	def found_line_in(self, timeout):
-		if not isinstance(mount, int) or not isinstance(mount, float):
+		if isinstance(timeout, int) or isinstance(timeout, float):
+			pass
+		else:
 			raise ValueError("timeout must be interger or float")
 		time_start = time.time()
 		time_during = 0
@@ -89,4 +88,4 @@ class Line_Follower(object):
 if __name__ == '__main__':
 	lf = Line_Follower()
 	while True:
-		print lf.read()
+		print lf.read_analog()
