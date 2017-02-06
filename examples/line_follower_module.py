@@ -78,11 +78,11 @@ class Line_Follower(object):
 				break
 
 	@property
-	def reference(self):
+	def references(self):
 		return self._references
 	
-	@reference.setter
-	def reference(self, value):
+	@references.setter
+	def references(self, value):
 		self._references = value
 
 if __name__ == '__main__':

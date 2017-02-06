@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load static %}
 
 {% block left_button %}
   <form class="mui-form" action="/" method="get" id="back">
@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="mui-container-fluid">
+<div class="mui-container-fluid full">
   <br>
   <!-- TTS Panel-->
   <div class="mui-row">
@@ -34,22 +34,7 @@
   </div>
   <!-- Control Panel-->
   <!--Forward button-->
-  <div class="mui-row mui--no-user-select", align="center">
-    <button class="mui-btn--fab mui-btn--primary mui--no-user-select" onmousedown="action('forward')" onmouseup="action('stop')" ontouchstart="action('forward')" ontouchend="action('stop')">▲</button>
-  </div>
-  <!--Left, Stop, Right button-->
-  <div class="mui-row", align="center">
-    <div class="mui-col-xs-5 mui-col-sm-2 mui-col-sm-offset-3", align="right">
-        <button class="mui-btn--fab mui-btn--primary mui--no-user-select" onmousedown="action('left')" onmouseup="action('stop')" ontouchstart="action('left')" ontouchend="action('stop')">◀</button>
-    </div>
-    <div class="mui-col-xs-5 mui-col-sm-2 mui-col-xs-offset-2 mui-col-sm-offset-2", align="left">
-        <button class="mui-btn--fab mui-btn--primary mui--no-user-select" onmousedown="action('right')" onmouseup="action('stop')" ontouchstart="action('right')" ontouchend="action('stop')">▶</button>
-    </div>
-  </div>
-  <!--Backward button-->
-  <div class="mui-row", align="center">
-    <button class="mui-btn--fab mui-btn--primary mui--no-user-select" onmousedown="action('backward')" onmouseup="action('stop')" ontouchstart="action('backward')" ontouchend="action('stop')">▼</button>
-  </div>
+  {% include "joystick.html" %} 
 </div>
 <!--<div id=debug>Debug: </div>-->
 

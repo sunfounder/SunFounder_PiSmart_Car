@@ -1,0 +1,167 @@
+{% load static %}
+
+<!doctype html>
+
+<style type="text/css">
+  canvas.full { 
+    height:  100%;
+    width:   100%;
+    border-color: #d3d3d3;
+    border-style: solid;
+  }
+  div.full {
+    height: 100%;
+    width:  100%;
+  }
+</style>
+
+<div class="full mui--no-user-select">
+  <div>Joystick</div>
+  <div id="debug"></div>
+  <div class="full" id="c">
+    <canvas id="joystick">
+      Your browser does not support the canvas element.
+    </canvas>
+  </div>
+</div>
+
+<script type="text/javascript">
+  var stick = 30;
+  var ring = 100;
+  var canvas,board;
+  canvas = document.getElementById('joystick');
+  canvas.setAttribute("width", document.getElementById('c').clientWidth);
+  canvas.setAttribute("height", document.getElementById('c').clientHeight);
+  canvas.style.border="1px solid #d3d3d3";
+  board = canvas.getContext('2d');
+  board.fillStyle="#2266ee";
+  board.strokeStyle="#2266ee";
+  board.lineWidth = 1;
+  
+  var send_cmd = new Worker("{% static "send_cmd.js" %}");
+  var mousePress = false;
+  var base = null;
+  var value = "";
+
+  // Get current url
+  var protocol  = window.location.protocol;
+  var host      = window.location.host;
+  var pathname  = window.location.pathname;
+  url = protocol + "//" + host + pathname + "?action" + "=";
+
+  function beginDraw(){
+    mousePress = true;
+    base = pos(event);
+    //document.getElementById("debug").innerHTML="Mouse down! at (" + base.x + "," + base.y + ")";
+    if(base!=null){
+      board.clearRect(0,0,canvas.width,canvas.height);
+      board.beginPath();
+      board.arc(base.x,base.y,stick,0,Math.PI*2);
+      board.closePath();
+      board.fill();
+      board.beginPath();
+      board.arc(base.x,base.y,ring,0,Math.PI*2);
+      board.stroke();
+    }
+  }
+  
+  function drawing(event){
+    event.preventDefault();
+    if(!mousePress)return;
+    var current = pos(event);
+    //document.getElementById("debug").innerHTML="Coordinates: (" + current.x + "," + current.y + ")";
+    var x = current.x;
+    var y = current.y;
+    var delta_x = x-base.x;
+    var delta_y = y-base.y;
+    var theta = Math.atan(Math.abs(delta_y/delta_x));
+    var r = Math.sqrt(Math.pow(delta_x,2)+Math.pow(delta_y,2));
+    if (r > ring){
+      if (delta_x>0){
+        delta_x = parseInt(ring * Math.cos(theta));
+      }
+      else{
+        delta_x = parseInt(-ring * Math.cos(theta));
+      }
+      if (delta_y>0){
+        delta_y = parseInt(ring * Math.sin(theta));
+      }
+      else{
+        delta_y = parseInt(-ring * Math.sin(theta));
+      }
+    }
+    x = base.x+delta_x
+    y = base.y+delta_y
+    if(base!=null){
+      board.clearRect(0,0,canvas.width,canvas.height); 
+      board.beginPath();
+      board.arc(x,y,stick,0,Math.PI*2);
+      board.closePath();
+      board.fill();
+      board.beginPath();
+      board.arc(base.x,base.y,ring,0,Math.PI*2);
+      board.closePath();
+      board.stroke();
+    }
+    delta_x = delta_x.toString();
+    delta_y = -delta_y.toString();
+    value = 'joystick_'
+    value = value.concat(delta_x, "_", delta_y);
+    value = url + value;
+    //send_cmd.postMessage(value);
+  }
+  
+  function endDraw(event){
+    mousePress = false;
+    event.preventDefault();
+    board.clearRect(0,0,canvas.width,canvas.height); 
+    board.beginPath();
+    board.arc(base.x,base.y,stick,0,Math.PI*2);
+    board.closePath();
+    board.fill();
+    board.beginPath();
+    board.arc(base.x,base.y,ring,0,Math.PI*2);
+    board.closePath();
+    board.stroke();
+    value = url + "stop";
+    //send_cmd.postMessage(value);
+  }
+
+  function pos(event){  
+    var x,y;  
+    if(isTouch(event)){  
+      x = parseInt(event.touches[0].pageX-event.target.offsetLeft);
+      y = parseInt(event.touches[0].pageY-event.target.offsetTop);
+    }else{  
+      x = event.offsetX;  
+      y = event.offsetY;  
+    }
+    return {x:x,y:y};  
+  }
+
+  function isTouch(event){   //Check is touch or mouse
+    var type = event.type;  
+    if(type.indexOf('touch')>=0){  
+      return true;  
+    }else{  
+      return false;  
+    }  
+  }
+
+  function send(){
+    if (value != ""){
+      send_cmd.postMessage(value);
+      value = "";
+    }
+  }
+
+  canvas.onmousedown = beginDraw;
+  canvas.onmousemove = drawing;
+  canvas.onmouseup = endDraw;
+  canvas.addEventListener('touchstart',beginDraw,false);
+  canvas.addEventListener('touchmove',drawing,false);
+  canvas.addEventListener('touchend',endDraw,false);
+  var timer = setInterval(send, 200);
+
+</script>
+              

@@ -1,16 +1,15 @@
-{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html>
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="save" content="history">
     <link rel = "Shortcut Icon" href="{% static 'favicon.ico' %} ">
     <!-- load MUI -->
     <link href="//cdn.muicss.com/mui-0.6.9/css/mui.min.css" rel="stylesheet" type="text/css" />
     <script src="//cdn.muicss.com/mui-0.6.9/js/mui.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
     <script type="text/javascript">
       function action(value){
         var xmlHttp  = new XMLHttpRequest();
@@ -24,6 +23,21 @@
         return xmlHttp.responseText;
       }
     </script>
+    <style type="text/css">
+      html {
+        height: 100%;
+        width:  100%;
+        overflow: hidden;
+      }
+      body {
+        height: 100%;
+        width:  100%;
+      }
+      div.full {
+        height: 100%;
+        width:  100%;
+      }
+    </style>
   </head>
 
 {% block whole_body %}
@@ -38,7 +52,7 @@
             </div>
             <div class="mui-col-xs-6 mui-col-md-6 mui-col-xs-offset-2 mui-col-md-offset-2 mui--text-headline mui--no-user-select", align="center">
                 {% block page_title %}
-                  Orion Car
+                  PiSmart Car
                 {% endblock %}
             </div>
             <div class="mui-col-xs-1 mui-col-md-1", align="left">

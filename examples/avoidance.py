@@ -1,26 +1,28 @@
-from orion import Motor, Orion, TTS, Speech_Recognition, LED
+# -*- coding=utf-8 -*-
+from pismart.pismart import PiSmart
+from pismart.motor import Motor
+from pismart.tts import TTS
+from pismart.stt import STT
+from pismart.led import LED
+
 import RPi.GPIO as GPIO
 import time
 
-o = Orion()
+my_pismart = PiSmart()
 tts = TTS()
 
-o.motor_switch(1)
-o.servo_switch(1)
-o.speaker_switch(1)
+my_pismart.motor_switch(1)
+my_pismart.speaker_switch(1)
 
-left_motor = Motor('Motor B', forward=1)
-right_motor = Motor('Motor A', forward=0)
-sr = Speech_Recognition('command', dictionary_update=False)
-led = LED(LED.BLUE)
+left_motor = Motor('MotorB', forward=1)
+right_motor = Motor('MotorA', forward=0)
+stt = STT('command', dictionary_update=False)
+led = LED()
 
-o.power_type = '2S'
-o.volume = 95
+my_pismart.power_type = '2S'
+my_pismart.speaker_volume = 30
 
 US_Sig = 17
-
-tts.engine = 'pico'
-#tts.DEBUG = True
 
 dead_line = 10
 safe_line = 18
@@ -34,101 +36,101 @@ say_delay = 4
 
 def setup():
 	GPIO.setmode(GPIO.BCM)
-	tts.say("Hello, I can do ultra-sonic avoidance now")
-	tts.say("Do I need a calibration")
+	tts.say = "Hello, I can do ultra-sonic avoidance now"
+	tts.say = "Do I need a calibration"
 	led.brightness=60
 	while True:
-		sr.recognize()
-		if sr.result == 'yes':
+		stt.recognize()
+		if stt.result == 'yes':
 			calibrate = True
 			break
-		if sr.result == 'no':
+		if stt.result == 'no':
 			calibrate = False
 			break
 	led.off()
 	if calibrate:
-		tts.say("Ok, Let's do the calibration")
+		tts.say = "Ok, Let's do the calibration"
 		cali()
-		tts.say("Calibration is done, you can check the result on the terminal output.")
+		tts.say = "Calibration is done, you can check the result on the terminal output."
 	else:
-		tts.say("Ok")
+		tts.say = "Ok"
 	time.sleep(2)
-	tts.say("Now, Shall we get started?")
+	tts.say = "Now, Shall we get started?"
 	led.brightness=60
 	while True:
-		sr.recognize()
-		if sr.result == 'yes':
+		stt.recognize()
+		if stt.result == 'yes':
 			answer = True
 			break
-		if sr.result == 'no':
+		if stt.result == 'no':
 			answer = False
 			break
 	led.off()
-	tts.say("Ok")
+	tts.say = "Ok"
 	if not answer:
 		destroy()
 
 def cali():
-	tts.say("So, This is how this work. I will do an action, and you tell me Yes, or No.")
-	tts.say("Let's do this.")
+	tts.say = "So, This is how this work. I will do an action, and you tell me Yes, or No."
+	tts.say = "Let's do this."
 	left_motor.forward()
 	time.sleep(1)
 	left_motor.stop()
-	tts.say("Did I just turned right?")
+	tts.say = "Did I just turned right?"
 	while True:
 		led.brightness=60
 		while True:
-			sr.recognize()
-			if sr.result == 'yes':
+			stt.recognize()
+			if stt.result == 'yes':
 				calibrate = True
 				break
-			if sr.result == 'no':
+			if stt.result == 'no':
 				calibrate = False
 				break
 		led.off()
 		left_motor.stop()
 		if calibrate:
-			tts.say("Thank you")
+			tts.say = "Thank you"
 			break
 		else:
-			tts.say("Ok")
+			tts.say = "Ok"
 			left_motor.forward_direction = (left_motor.forward_direction + 1) & 1
 			left_motor.forward()
 			time.sleep(1)
 			left_motor.stop()
-			tts.say("How about now.")
+			tts.say = "How about now."
 	time.sleep(1)
-	tts.say("So")
+	tts.say = "So"
 	right_motor.forward()
 	time.sleep(1)
 	right_motor.stop()
-	tts.say("Did I just turned left?")
+	tts.say = "Did I just turned left?"
 	while True:
 		led.brightness=60
 		while True:
-			sr.recognize()
-			if sr.result == 'yes':
+			stt.recognize()
+			if stt.result == 'yes':
 				calibrate = True
 				break
-			if sr.result == 'no':
+			if stt.result == 'no':
 				calibrate = False
 				break
 		led.off()
 		if calibrate:
-			tts.say("Thank you")
+			tts.say = "Thank you"
 			break
 		else:
-			tts.say("Ok")
+			tts.say = "Ok"
 			right_motor.forward_direction = (right_motor.forward_direction + 1) & 1
 			right_motor.forward()
 			time.sleep(1)
 			right_motor.stop()
-			tts.say("How about now.")
-	tts.say("So my left motor's forward direction is %d" % left_motor.forward_direction)
+			tts.say = "How about now."
+	tts.say = "So my left motor's forward direction is %d" % left_motor.forward_direction
 	print "Left motor's forward direction is %d" % left_motor.forward_direction
-	tts.say("My right motor's forward direction is %d" % right_motor.forward_direction)
+	tts.say = "My right motor's forward direction is %d" % right_motor.forward_direction
 	print "Right motor's forward direction is %d" % right_motor.forward_direction
-	tts.say("You should change the forward direction setting in the code at motor definations.")
+	tts.say = "You should change the forward direction setting in the code at motor definations."
 
 def read_distance():
 	pulse_end = 0
@@ -157,7 +159,7 @@ def stop():
 	left_motor.stop()
 	right_motor.stop()
 
-def left_right(direction):
+def left_right(direction): 
 	if direction:
 		left_motor.forward(70)
 		right_motor.forward(0)
@@ -180,34 +182,34 @@ def main():
 	last_turning_time = 0	# check time for shake
 	while True:
 		dis = read_distance()
-		if dis > last_dis-or_so and dis < last_dis+or_so:
+		if dis > last_dis-or_so and dis < last_dis+or_so:    # count how many times no distance changed
 			check_stop.append(dis)
 		else:
 			check_stop = []
-		if len(check_stop) > check_stop_max:
+		if len(check_stop) > check_stop_max:   # a few times car distance no change, stop and call for help
 			stop()
 			print check_stop
 			time_now = time.time()
 			if time_now - last_say_time > say_delay:
-				tts.say('Help me!')
+				tts.say = 'Help me!'
 				last_say_time = time_now
 		else:
-			if dis < dead_line:
+			if dis < dead_line:     # too close, backward
 				backward()
 				time.sleep(0.5)
-			elif dis > safe_line:
+			elif dis > safe_line:   # 无障碍，小车左右摇摆前进。由direction来调节左右，turning_time摇摆节奏
 				time_now = time.time()
 				if time_now - last_turning_time > turning_time:
 					direction = not direction
 					last_turning_time = time_now
-			else:
+			else:                   # 检测到障碍后，由于不摇摆，所以将持续转向，以此避障
 				time_now = time.time()
 				print time_now, last_say_time
-				if time_now - last_say_time > say_delay:
+				if time_now - last_say_time > say_delay: 
 					if direction:
-						tts.say('Turn right')
+						tts.say = 'Turn right'
 					else:
-						tts.say('Turn left')
+						tts.say = 'Turn left'
 					last_say_time = time_now
 			left_right(direction)
 		last_dis = dis
@@ -215,7 +217,7 @@ def main():
 def destroy():
 	GPIO.setup(US_Sig,GPIO.IN)
 	stop()
-	o.motor_switch(0)
+	my_pismart.motor_switch(0)
 	GPIO.cleanup()
 
 if __name__ == '__main__':

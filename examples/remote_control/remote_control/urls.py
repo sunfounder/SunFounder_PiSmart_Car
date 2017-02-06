@@ -22,4 +22,5 @@ urlpatterns = [
     url(r'^$', views.home),
     url(r'^run/([^/]*)/$', views.run),
     url(r'^run/$', views.run),
+    url(r'^test/$', views.test),
 ]

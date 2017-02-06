@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding=utf-8 -*-
 '''
 **********************************************************************
 * Filename		 : line_track.py
@@ -7,12 +8,15 @@
 * Company		 : SunFounder
 * E-mail		 : service@sunfounder.com
 * Website		 : www.sunfounder.com
-* Update		 : Cavon	2016-08-12
-* Detail		 : New file
+* Update		 : Cavon	2017-02-04
 **********************************************************************
 '''
-from pirobot import PiRobot, Motor, TTS, Speech_Recognition, LED
-import numpy
+from pismart.pismart import PiSmart
+from pismart.motor import Motor
+from pismart.tts import TTS
+from pismart.stt import STT
+from pismart.led import LED
+
 import time
 import line_follower_module
 
@@ -21,78 +25,79 @@ REFERENCES = [359, 352, 342, 316, 356]
 forward_speed = 70
 turning_speed = 60
 
-max_off_track_count = 1
-max_trick_count = 1
+max_off_track_count = 1    # off track count
+max_trick_count = 1        # tolerant tricked count
 
-p = PiRobot()
+my_pismart = PiSmart()
 tts = TTS()
-sr = Speech_Recognition('command', dictionary_update=False)
-led = LED(LED.BLUE)
+stt = STT('command', dictionary_update=False)
+led = LED() 	
 lf = line_follower_module.Line_Follower(references=REFERENCES)
 
-p.motor_switch(1)
-p.servo_switch(1)
-p.speaker_switch(1)
+my_pismart.motor_switch(1)
+my_pismart.speaker_switch(1)
 
-left_motor = Motor('Motor B', forward=0)
-right_motor = Motor('Motor A', forward=1)
+left_motor = Motor('MotorB', forward=0)
+right_motor = Motor('MotorA', forward=1)
 left_motor.stop()
 right_motor.stop()
 
-p.power_type = '2S'
-p.volume = 95
-p.capture_volume = 100
-tts.engine = 'pico'
+my_pismart.power_type = '2S'
+my_pismart.speaker_volume = 3    
+my_pismart.capture_volume = 100  
 
 def setup():
-	tts.say("Hello, I can track black lines now, Do I need a calibration for the black and white colors?")
+	tts.say = "Hello, I can track black lines now, Do I need a calibration for the black and white colors?"
+	
 	led.brightness=60
-	while True:
-		sr.recognize()
-		if sr.result == 'yes':
+	while True:   #  亮灯，开始接收指令。听到指令是yes和no时，分别给calibrate赋值True和False
+		stt.recognize()
+		if stt.result == 'yes':
 			calibrate = True
 			break
-		if sr.result == 'no':
+		if stt.result == 'no':
 			calibrate = False
 			break
-	led.off()
+
+	led.off()    # 接收完指令灯灭，根据calibrate来执行对应动作
 	if calibrate:
-		tts.say("Ok, Let's do the calibration")
+		tts.say = "Ok, Let's do the calibration"
 		cali()
-		tts.say("Calibration is done, you can check the result on the terminal output.")
+		tts.say = "Calibration is done, you can check the result on the terminal output."
 	else:
-		tts.say("Ok")
-	tts.say("Shall we get started?")
-	led.brightness=60
+		tts.say = "Ok"
+	tts.say = "Shall we get started?"
+	
+	led.brightness=60  #  亮灯，开始接收指令。
 	while True:
-		sr.recognize()
-		if sr.result == 'yes':
+		stt.recognize()
+		if stt.result == 'yes':
 			answer = True
 			break
-		if sr.result == 'no':
+		if stt.result == 'no':
 			answer = False
 			break
+	
 	led.off()
-	tts.say("Ok")
+	tts.say = "Ok"
 	if not answer:
 		destroy()
-
 
 def main():
 	global forward_speed, turning_speed
 	trick_count = 0
 	off_track_count = 0
-	tts.say('Take me to the start point.')
+	tts.say = 'Take me to the start point.'
 	time.sleep(2)
-	tts.say("Let's roll!")
+	tts.say = "Let's roll!"
 	left_speed = forward_speed
 	right_speed = forward_speed
 	a_step = 0.1
 	b_step = 0.3
 	c_step = 0.7
 	d_step = 1
-	while True:
-		lt_status = lf.read_digital()
+	while True:    # main loop
+		lt_status = lf.read_digital()  
 		print lt_status
 		# Speed calculate
 		if	lt_status == [0,0,1,0,0]:
@@ -120,26 +125,27 @@ def main():
 			off_track_count = 0
 			left_speed = int(turning_speed * (1+step))
 			right_speed = int(turning_speed * (1-step))
-		elif lt_status == [0,0,0,0,0]:
+		
+		elif lt_status == [0,0,0,0,0]:    # no black line detected
 			off_track_count += 1
-			if off_track_count >= max_off_track_count:
+			if off_track_count >= max_off_track_count: # is off track
 				off_track_count = 0
 				while True:
 					left_motor.stop()
 					right_motor.stop()
-					tts.say('I think I am off track. Which way should I go?')
+					tts.say = 'I think I am off track. Which way should I go?'
 					turning_speed -= 2
 					led.brightness=60
 					while True:
-						sr.recognize()
-						if sr.result == 'left':
+						stt.recognize()
+						if stt.result == 'left':
 							direction = 1
 							break
-						if sr.result == 'right':
+						if stt.result == 'right':
 							direction = 2
 							break
 					led.off()
-					tts.say('Ok, let me see.')
+					tts.say = 'Ok, let me see.'
 					if   direction == 1:
 						left_motor.backward(turning_speed)
 						right_motor.forward(turning_speed)
@@ -149,25 +155,27 @@ def main():
 					if lf.found_line_in(0.5):
 						left_motor.stop()
 						right_motor.stop()
-						tts.say('Here it is! Thank you!')
+						tts.say = 'Here it is! Thank you!'
 						break
 					else:
 						left_motor.stop()
 						right_motor.stop()
 						if trick_count < max_trick_count:
-							tts.say('Are you kidding me?')
+							tts.say = 'Are you kidding me?'
 							trick_count += 1
 							time.sleep(0.3)
-							tts.say('Please help!')
+							tts.say = 'Please help!'
 							time.sleep(1)
 						else:
-							tts.say('Again?')
+							tts.say = 'Again?'
 							time.sleep()
-							tts.say('I do not believe you any more. Bye bye.')
+							tts.say = 'I do not believe you any more. Bye bye.'
 							destroy()
 		else:
 			off_track_count = 0
-		if left_speed > 100:
+
+		# speed limit
+		if left_speed > 100:     
 			left_speed = 100
 		elif left_speed < 0:
 			left_speed = 0
@@ -181,24 +189,26 @@ def main():
 
 def cali():
 	mount = 100
-	tts.say('Take me to the white.')
+	tts.say = 'Take me to the white.'
 	time.sleep(2)
 	led.brightness = 60
-	tts.say('Measuring')
-	white_references = lf.get_average(mount)
-	tts.say('Done')
+	tts.say = 'Measuring'
+	white_references = lf.get_average(mount)  # get average value of white
+	tts.say = 'Done'
 	led.off()
 
-	tts.say('Now, take me to the black.')
+	tts.say = 'Now, take me to the black.'
 	time.sleep(2)
 	led.brightness = 60
-	tts.say('Measuring')
-	black_references = lf.get_average(mount)
-	tts.say("Done.")
+	tts.say = 'Measuring'
+	black_references = lf.get_average(mount) # get average value of black
+	tts.say = "Done."
 	led.off()
-	for i in range(0, 5):
+
+	references = lf.references
+	for i in range(0, 5):      # get all five middle value.
 		references[i] = (white_references[i] + black_references[i]) / 2
-	lf.references = references
+	lf.references = references  
 	print "Middle references =", references
 	time.sleep(1)
 
@@ -212,10 +222,10 @@ def test():
 def destroy():
 	left_motor.stop()
 	right_motor.stop()
-	p.motor_switch(0)
-	p.servo_switch(0)
-	p.speaker_switch(0)
-	tts.say("Bye-bye.")
+	my_pismart.motor_switch(0)
+	my_pismart.servo_switch(0)
+	my_pismart.speaker_switch(0)
+	tts.say = "Bye-bye."
 	led.off()
 	quit()
 
