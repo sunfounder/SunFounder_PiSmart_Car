@@ -13,7 +13,7 @@ p.speaker_switch(1)
 
 MAXSPEED = 60
 
-left_motor = Motor('MotorB', forward=0)
+left_motor = Motor('MotorB', forward=1)
 right_motor = Motor('MotorA', forward=1)
 
 left_motor.stop()
@@ -108,7 +108,7 @@ def move(value):
     right_motor.speed = int(right_speed)
 
 def home(request):
-    return render_to_response("base.html", request)
+    return render_to_response("base.html")
 
 def run(request):
     words = ''
