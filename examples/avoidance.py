@@ -5,8 +5,9 @@ from pismart.tts import TTS
 from pismart.stt import STT
 from pismart.led import LED
 
-import RPi.GPIO as GPIO
 import time
+
+from Ultrasonic_Avoidance import Ultrasonic_Avoidance
 
 my_pismart = PiSmart()
 tts = TTS()
@@ -14,15 +15,16 @@ tts = TTS()
 my_pismart.motor_switch(1)
 my_pismart.speaker_switch(1)
 
+UA_PIN = 17
+
 left_motor = Motor('MotorB', forward=1)
 right_motor = Motor('MotorA', forward=0)
 stt = STT('command', dictionary_update=False)
 led = LED()
+ua = Ultrasonic_Avoidance(UA_PIN)
 
 my_pismart.power_type = '2S'
-my_pismart.speaker_volume = 30
-
-US_Sig = 17
+my_pismart.speaker_volume = 100
 
 dead_line = 10
 safe_line = 18
@@ -35,7 +37,8 @@ or_so = 2.5
 say_delay = 4
 
 def setup():
-	GPIO.setmode(GPIO.BCM)
+	left_motor.stop()
+	right_motor.stop()
 	tts.say = "Hello, I can do ultra-sonic avoidance now"
 	tts.say = "Do I need a calibration"
 	led.brightness=60
@@ -132,29 +135,6 @@ def cali():
 	print "Right motor's forward direction is %d" % right_motor.forward_direction
 	tts.say = "You should change the forward direction setting in the code at motor definations."
 
-def read_distance():
-	pulse_end = 0
-	pulse_start = 0
-	GPIO.setup(US_Sig,GPIO.OUT)
-	GPIO.output(US_Sig, False)
-	time.sleep(0.01)
-
-	GPIO.output(US_Sig, True)
-	time.sleep(0.00001)
-	GPIO.output(US_Sig, False)
-
-	GPIO.setup(US_Sig,GPIO.IN)
-	while GPIO.input(US_Sig)==0:
-		pulse_start = time.time()
-	while GPIO.input(US_Sig)==1:
-		pulse_end = time.time()
-
-	pulse_duration = pulse_end - pulse_start
-	distance = pulse_duration * 17150
-	distance = round(distance, 3)
-	
-	return distance
-
 def stop():
 	left_motor.stop()
 	right_motor.stop()
@@ -181,7 +161,7 @@ def main():
 	last_say_time = 0			# Record the last say time, Do not Repeat the same speech rapidly
 	last_turning_time = 0	# check time for shake
 	while True:
-		dis = read_distance()
+		dis = ua.get_distance()
 		if dis > last_dis-or_so and dis < last_dis+or_so:    # count how many times no distance changed
 			check_stop.append(dis)
 		else:
@@ -215,10 +195,8 @@ def main():
 		last_dis = dis
 
 def destroy():
-	GPIO.setup(US_Sig,GPIO.IN)
 	stop()
 	my_pismart.motor_switch(0)
-	GPIO.cleanup()
 
 if __name__ == '__main__':
 	try:
