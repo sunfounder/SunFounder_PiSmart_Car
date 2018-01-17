@@ -19,7 +19,7 @@ UA_PIN = 17
 
 left_motor = Motor('MotorB', forward=1)
 right_motor = Motor('MotorA', forward=0)
-stt = STT('command', dictionary_update=False)
+stt = STT('command', dictionary_update=True)
 led = LED()
 ua = Ultrasonic_Avoidance(UA_PIN)
 

@@ -30,7 +30,7 @@ max_trick_count = 1        # tolerant tricked count
 
 my_pismart = PiSmart()
 tts = TTS()
-stt = STT('command', dictionary_update=False)
+stt = STT('command', dictionary_update=True)
 led = LED() 	
 lf = line_follower_module.Line_Follower(references=REFERENCES)
 
